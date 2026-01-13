@@ -1,0 +1,377 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		09B6A33A54C7D5DDA1594582 /* ShepherdApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84CCD7ED21CEEDFA02AF272D /* ShepherdApp.swift */; };
+		1C4B0DAA61692573E827C339 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90B88BCACBB3FADDC7C77BF7 /* MenuBarView.swift */; };
+		1F6699CAB20FDF32FA070DFC /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36541322D56FB895FB7F06E0 /* Constants.swift */; };
+		211EFF68DAE8AA82D3414881 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71181F360C1CE136EB924B2D /* HotkeyManager.swift */; };
+		26A25A0258EB7D14B8640607 /* OverlayWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C270C1CBDF022951B2BDB0 /* OverlayWindowController.swift */; };
+		2C5959FF27B3B66223DC0E76 /* InputPillView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32E9DB86B51DCBBFEC5A081A /* InputPillView.swift */; };
+		5F5F0BEF4F9504B421988AB1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 589D1078CB7E3CEDA2BA92D2 /* SettingsView.swift */; };
+		AE0DDFDFC65B1920DD9EBAF3 /* WatcherMarkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E821F90C12592E103D3826F0 /* WatcherMarkView.swift */; };
+		E2AB65A00B92EC300A67A96E /* WatcherManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CC325171621861D9170EAB /* WatcherManager.swift */; };
+		FB0CA46C50CDA611989E2BEC /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7AC1983EAD2DDF8616D6D8A /* AppState.swift */; };
+		FB80AE697555E516077A6B42 /* SelectionOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB8416D7A04DE84C5370B68D /* SelectionOverlayView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1F3BF30E4B06B141B9F8EDFE /* Shepherd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Shepherd.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		32E9DB86B51DCBBFEC5A081A /* InputPillView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputPillView.swift; sourceTree = "<group>"; };
+		36541322D56FB895FB7F06E0 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		54CC325171621861D9170EAB /* WatcherManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatcherManager.swift; sourceTree = "<group>"; };
+		589D1078CB7E3CEDA2BA92D2 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		71181F360C1CE136EB924B2D /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
+		84CCD7ED21CEEDFA02AF272D /* ShepherdApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShepherdApp.swift; sourceTree = "<group>"; };
+		90B88BCACBB3FADDC7C77BF7 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
+		AB8416D7A04DE84C5370B68D /* SelectionOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionOverlayView.swift; sourceTree = "<group>"; };
+		B1C270C1CBDF022951B2BDB0 /* OverlayWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayWindowController.swift; sourceTree = "<group>"; };
+		D7AC1983EAD2DDF8616D6D8A /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		E821F90C12592E103D3826F0 /* WatcherMarkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatcherMarkView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		153B2A2784DA9941B7AEF525 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				D7AC1983EAD2DDF8616D6D8A /* AppState.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		4F7FE6F2C7180E5391339251 = {
+			isa = PBXGroup;
+			children = (
+				7E3373F4F04365E1F61C2611 /* Resources */,
+				C9C1728FA762C2498C12D4FF /* Sources */,
+				D4C6EFC09444CA2204A47C89 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		556FCF1B949020F974EBBED9 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				32E9DB86B51DCBBFEC5A081A /* InputPillView.swift */,
+				90B88BCACBB3FADDC7C77BF7 /* MenuBarView.swift */,
+				AB8416D7A04DE84C5370B68D /* SelectionOverlayView.swift */,
+				589D1078CB7E3CEDA2BA92D2 /* SettingsView.swift */,
+				E821F90C12592E103D3826F0 /* WatcherMarkView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		7E3373F4F04365E1F61C2611 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		B44ED9D8188BE36D61149000 /* Managers */ = {
+			isa = PBXGroup;
+			children = (
+				71181F360C1CE136EB924B2D /* HotkeyManager.swift */,
+				B1C270C1CBDF022951B2BDB0 /* OverlayWindowController.swift */,
+				54CC325171621861D9170EAB /* WatcherManager.swift */,
+			);
+			path = Managers;
+			sourceTree = "<group>";
+		};
+		C9C1728FA762C2498C12D4FF /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				E367F810B18BE0B2E4C32F78 /* App */,
+				B44ED9D8188BE36D61149000 /* Managers */,
+				153B2A2784DA9941B7AEF525 /* Models */,
+				F727B22C2D4789E5253889DF /* Utils */,
+				556FCF1B949020F974EBBED9 /* Views */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		D4C6EFC09444CA2204A47C89 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1F3BF30E4B06B141B9F8EDFE /* Shepherd.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E367F810B18BE0B2E4C32F78 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				84CCD7ED21CEEDFA02AF272D /* ShepherdApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		F727B22C2D4789E5253889DF /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				36541322D56FB895FB7F06E0 /* Constants.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		47CE77D29590638B6E1C9B7C /* Shepherd */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3A14763CD9F3E482241C0F28 /* Build configuration list for PBXNativeTarget "Shepherd" */;
+			buildPhases = (
+				93B84850786B42868F6EF9A7 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Shepherd;
+			packageProductDependencies = (
+			);
+			productName = Shepherd;
+			productReference = 1F3BF30E4B06B141B9F8EDFE /* Shepherd.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F77F5673D097D45B60DD1E31 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					47CE77D29590638B6E1C9B7C = {
+						DevelopmentTeam = "";
+					};
+				};
+			};
+			buildConfigurationList = 9CB066B107A75AA40EC0A837 /* Build configuration list for PBXProject "Shepherd" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 4F7FE6F2C7180E5391339251;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				47CE77D29590638B6E1C9B7C /* Shepherd */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		93B84850786B42868F6EF9A7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FB0CA46C50CDA611989E2BEC /* AppState.swift in Sources */,
+				1F6699CAB20FDF32FA070DFC /* Constants.swift in Sources */,
+				211EFF68DAE8AA82D3414881 /* HotkeyManager.swift in Sources */,
+				2C5959FF27B3B66223DC0E76 /* InputPillView.swift in Sources */,
+				1C4B0DAA61692573E827C339 /* MenuBarView.swift in Sources */,
+				26A25A0258EB7D14B8640607 /* OverlayWindowController.swift in Sources */,
+				FB80AE697555E516077A6B42 /* SelectionOverlayView.swift in Sources */,
+				5F5F0BEF4F9504B421988AB1 /* SettingsView.swift in Sources */,
+				09B6A33A54C7D5DDA1594582 /* ShepherdApp.swift in Sources */,
+				E2AB65A00B92EC300A67A96E /* WatcherManager.swift in Sources */,
+				AE0DDFDFC65B1920DD9EBAF3 /* WatcherMarkView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		630FF921F97AC782D5A4FF02 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Shepherd.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.shepherd.app;
+				PRODUCT_NAME = Shepherd;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		7420930D855BD9200BC2C80D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		7D0B7532E4031F4D2B5B4501 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Shepherd.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.shepherd.app;
+				PRODUCT_NAME = Shepherd;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		CE710F5C3E257A3EA1BF21B8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		3A14763CD9F3E482241C0F28 /* Build configuration list for PBXNativeTarget "Shepherd" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7D0B7532E4031F4D2B5B4501 /* Debug */,
+				630FF921F97AC782D5A4FF02 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9CB066B107A75AA40EC0A837 /* Build configuration list for PBXProject "Shepherd" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CE710F5C3E257A3EA1BF21B8 /* Debug */,
+				7420930D855BD9200BC2C80D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = F77F5673D097D45B60DD1E31 /* Project object */;
+}
