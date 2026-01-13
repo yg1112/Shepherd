@@ -79,8 +79,9 @@ final class WatcherManager: ObservableObject {
 
         for watcher in AppState.shared.watchers where watcher.isActive {
             do {
-                NSLog("[Shepherd] Capturing region for '\(watcher.name)': \(watcher.region)")
-                let image = try await captureRegion(watcher.region)
+                let regionToCapture = watcher.currentRegion
+                NSLog("[Shepherd] Capturing region for '\(watcher.name)': \(regionToCapture)")
+                let image = try await captureRegion(regionToCapture)
                 NSLog("[Shepherd] Captured image: \(image.width)x\(image.height)")
 
                 // OCR Analysis

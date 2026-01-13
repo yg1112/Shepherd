@@ -8,6 +8,7 @@ struct SelectionOverlayView: View {
     @State private var mousePosition: CGPoint = .zero
     @State private var showInputPill: Bool = false
     @State private var isVisible: Bool = false
+    @State private var detectedWindowInfo: (windowID: CGWindowID, frame: CGRect, title: String?, ownerName: String?)? = nil
 
     var body: some View {
         GeometryReader { geometry in
@@ -15,6 +16,11 @@ struct SelectionOverlayView: View {
                 // Dimmed background
                 Color.overlayBackground
                     .opacity(isVisible ? 1 : 0)
+
+                // Window highlight (Klein Blue border around detected window)
+                if let windowInfo = detectedWindowInfo, !showInputPill {
+                    WindowHighlightView(frame: windowInfo.frame)
+                }
 
                 // Selection rectangle
                 if let rect = selectionRect {
@@ -34,6 +40,7 @@ struct SelectionOverlayView: View {
                             x: rect.midX,
                             y: rect.maxY + 60
                         ),
+                        windowName: detectedWindowInfo?.ownerName,
                         onSubmit: { name, keyword in
                             appState.addWatcher(name: name, keyword: keyword)
                             OverlayWindowController.shared.hide()
@@ -54,6 +61,15 @@ struct SelectionOverlayView: View {
                 switch phase {
                 case .active(let location):
                     mousePosition = location
+                    // Only update window info when we find a new window (don't clear it)
+                    if let newWindow = WindowTracker.getWindowAt(point: location) {
+                        if detectedWindowInfo?.windowID != newWindow.windowID {
+                            shepherdLog("Window detected: '\(newWindow.ownerName ?? "Unknown")' ID:\(newWindow.windowID) frame:\(newWindow.frame)")
+                        }
+                        detectedWindowInfo = newWindow
+                    } else {
+                        shepherdLog("No window found at position: \(location)")
+                    }
                 case .ended:
                     break
                 }
@@ -98,7 +114,7 @@ struct SelectionOverlayView: View {
             }
             .onEnded { value in
                 if let rect = selectionRect, rect.width > 20, rect.height > 20 {
-                    appState.completeSelection(region: rect)
+                    appState.completeSelection(region: rect, windowInfo: detectedWindowInfo)
                     withAnimation(ShepherdAnimation.springBounce) {
                         showInputPill = true
                     }
@@ -108,6 +124,20 @@ struct SelectionOverlayView: View {
                     dragCurrent = nil
                 }
             }
+    }
+}
+
+// MARK: - Window Highlight View (Klein Blue border around detected window)
+struct WindowHighlightView: View {
+    let frame: CGRect
+
+    var body: some View {
+        Rectangle()
+            .stroke(Color.kleinBlue, lineWidth: 3)
+            .shadow(color: .kleinBlue, radius: 8)
+            .shadow(color: .kleinBlue.opacity(0.5), radius: 16)
+            .frame(width: frame.width, height: frame.height)
+            .position(x: frame.midX, y: frame.midY)
     }
 }
 

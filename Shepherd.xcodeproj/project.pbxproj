@@ -14,6 +14,7 @@
 		26A25A0258EB7D14B8640607 /* OverlayWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C270C1CBDF022951B2BDB0 /* OverlayWindowController.swift */; };
 		2C5959FF27B3B66223DC0E76 /* InputPillView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32E9DB86B51DCBBFEC5A081A /* InputPillView.swift */; };
 		5F5F0BEF4F9504B421988AB1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 589D1078CB7E3CEDA2BA92D2 /* SettingsView.swift */; };
+		A92B22A5CB52BC0D42D3F305 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DA43E3A70A6F5AB75733FE30 /* Assets.xcassets */; };
 		AE0DDFDFC65B1920DD9EBAF3 /* WatcherMarkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E821F90C12592E103D3826F0 /* WatcherMarkView.swift */; };
 		E2AB65A00B92EC300A67A96E /* WatcherManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CC325171621861D9170EAB /* WatcherManager.swift */; };
 		FB0CA46C50CDA611989E2BEC /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7AC1983EAD2DDF8616D6D8A /* AppState.swift */; };
@@ -32,6 +33,7 @@
 		AB8416D7A04DE84C5370B68D /* SelectionOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionOverlayView.swift; sourceTree = "<group>"; };
 		B1C270C1CBDF022951B2BDB0 /* OverlayWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayWindowController.swift; sourceTree = "<group>"; };
 		D7AC1983EAD2DDF8616D6D8A /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		DA43E3A70A6F5AB75733FE30 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E821F90C12592E103D3826F0 /* WatcherMarkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatcherMarkView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -68,6 +70,7 @@
 		7E3373F4F04365E1F61C2611 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				DA43E3A70A6F5AB75733FE30 /* Assets.xcassets */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -126,6 +129,7 @@
 			buildConfigurationList = 3A14763CD9F3E482241C0F28 /* Build configuration list for PBXNativeTarget "Shepherd" */;
 			buildPhases = (
 				93B84850786B42868F6EF9A7 /* Sources */,
+				A538DB493D85FD24E53EA892 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -148,7 +152,8 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					47CE77D29590638B6E1C9B7C = {
-						DevelopmentTeam = "";
+						DevelopmentTeam = DRV5ZMT5U8;
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -170,6 +175,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A538DB493D85FD24E53EA892 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A92B22A5CB52BC0D42D3F305 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		93B84850786B42868F6EF9A7 /* Sources */ = {
@@ -198,7 +214,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Shepherd.entitlements;
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = Info.plist;
@@ -246,7 +263,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = DRV5ZMT5U8;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -273,7 +290,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Shepherd.entitlements;
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = Info.plist;
@@ -321,7 +339,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = DRV5ZMT5U8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;

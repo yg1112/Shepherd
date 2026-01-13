@@ -2,6 +2,7 @@ import SwiftUI
 
 struct InputPillView: View {
     let position: CGPoint
+    var windowName: String? = nil
     let onSubmit: (String, String?) -> Void
     let onCancel: () -> Void
 
@@ -12,6 +13,19 @@ struct InputPillView: View {
 
     var body: some View {
         VStack(spacing: 12) {
+            // Window binding indicator
+            if let windowName = windowName {
+                HStack {
+                    Image(systemName: "link")
+                        .foregroundColor(.kleinBlue)
+                        .font(.caption2)
+                    Text("Bound to \(windowName)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.bottom, 4)
+            }
+
             // Name input
             HStack {
                 Image(systemName: "pawprint.fill")

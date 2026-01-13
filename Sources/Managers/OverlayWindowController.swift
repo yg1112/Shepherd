@@ -13,8 +13,37 @@ final class OverlayWindowController: ObservableObject {
 
     private var overlayWindows: [NSWindow] = []
     private var markWindows: [UUID: NSWindow] = [:]
+    private var markUpdateTimer: Timer?
 
-    private init() {}
+    private init() {
+        startMarkUpdateTimer()
+    }
+
+    private func startMarkUpdateTimer() {
+        markUpdateTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.updateMarkPositions()
+            }
+        }
+    }
+
+    private func updateMarkPositions() {
+        for watcher in AppState.shared.watchers {
+            if let existingWindow = markWindows[watcher.id] {
+                let region = watcher.currentRegion
+                guard let screen = NSScreen.main else { continue }
+                let screenHeight = screen.frame.height
+                let size: CGFloat = 80
+
+                let newOrigin = CGPoint(
+                    x: region.minX,
+                    y: screenHeight - region.minY - size
+                )
+
+                existingWindow.setFrameOrigin(newOrigin)
+            }
+        }
+    }
 
     // MARK: - Show Overlay on All Screens
     func show() {

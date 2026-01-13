@@ -10,7 +10,7 @@ settings:
   base:
     SWIFT_VERSION: "5.9"
     MACOSX_DEPLOYMENT_TARGET: "13.0"
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: "DRV5ZMT5U8"
 
 targets:
   Shepherd:
@@ -32,7 +32,8 @@ targets:
         LD_RUNPATH_SEARCH_PATHS:
           - "@executable_path/../Frameworks"
         ENABLE_HARDENED_RUNTIME: YES
-        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     info:
       path: Info.plist
