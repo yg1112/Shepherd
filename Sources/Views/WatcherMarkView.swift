@@ -7,6 +7,10 @@ struct WatcherMarkView: View {
     @State private var breathingOpacity: Double = 0.8
     @State private var alertPulse: Bool = false
 
+    private var watcher: Watcher? {
+        appState.watchers.first { $0.id == watcherId }
+    }
+
     private var isTriggered: Bool {
         if case .triggered(let id) = appState.currentState {
             return id == watcherId
@@ -18,25 +22,49 @@ struct WatcherMarkView: View {
         isTriggered ? .alertOrange : .kleinBlue
     }
 
+    private var isAudioMode: Bool {
+        watcher?.watchMode == .audio
+    }
+
     var body: some View {
-        // Large solid pawprint with subtle single-layer glow
-        Image(systemName: "pawprint.fill")
-            .font(.system(size: 32, weight: .bold))
-            .foregroundColor(iconColor)
-            .opacity(isTriggered ? (alertPulse ? 0.6 : 1.0) : breathingOpacity)
-            // Single clean glow
-            .shadow(color: iconColor.opacity(0.6), radius: 4)
-            .onAppear {
+        // Custom logo with frosted glass circle background
+        ZStack {
+            // Frosted glass circle background
+            Circle()
+                .fill(.ultraThinMaterial)
+                .frame(width: 44, height: 44)
+                .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+
+            // Icon based on watch mode
+            if isAudioMode {
+                // Ear icon for audio mode
+                Image(systemName: "ear.fill")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundColor(iconColor)
+                    .opacity(isTriggered ? (alertPulse ? 0.6 : 1.0) : breathingOpacity)
+            } else {
+                // Custom dog silhouette logo for visual mode
+                Image("MenuBarIcon")
+                    .renderingMode(.template)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 26, height: 26)
+                    .foregroundColor(iconColor)
+                    .opacity(isTriggered ? (alertPulse ? 0.6 : 1.0) : breathingOpacity)
+            }
+        }
+        .shadow(color: iconColor.opacity(0.4), radius: 6)
+        .onAppear {
+            startBreathingAnimation()
+        }
+        .onChange(of: isTriggered) { triggered in
+            if triggered {
+                startAlertAnimation()
+            } else {
+                alertPulse = false
                 startBreathingAnimation()
             }
-            .onChange(of: isTriggered) { triggered in
-                if triggered {
-                    startAlertAnimation()
-                } else {
-                    alertPulse = false
-                    startBreathingAnimation()
-                }
-            }
+        }
     }
 
     private func startBreathingAnimation() {
@@ -54,15 +82,33 @@ struct WatcherMarkView: View {
 
 #Preview {
     HStack(spacing: 40) {
-        Image(systemName: "pawprint.fill")
-            .font(.system(size: 32, weight: .bold))
-            .foregroundColor(.kleinBlue)
-            .shadow(color: Color.kleinBlue.opacity(0.6), radius: 4)
+        // Normal state
+        ZStack {
+            Circle()
+                .fill(.ultraThinMaterial)
+                .frame(width: 44, height: 44)
+            Image("MenuBarIcon")
+                .renderingMode(.template)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 26, height: 26)
+                .foregroundColor(.kleinBlue)
+        }
+        .shadow(color: Color.kleinBlue.opacity(0.4), radius: 6)
 
-        Image(systemName: "pawprint.fill")
-            .font(.system(size: 32, weight: .bold))
-            .foregroundColor(.alertOrange)
-            .shadow(color: Color.alertOrange.opacity(0.6), radius: 4)
+        // Triggered state
+        ZStack {
+            Circle()
+                .fill(.ultraThinMaterial)
+                .frame(width: 44, height: 44)
+            Image("MenuBarIcon")
+                .renderingMode(.template)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 26, height: 26)
+                .foregroundColor(.alertOrange)
+        }
+        .shadow(color: Color.alertOrange.opacity(0.4), radius: 6)
     }
     .padding(40)
     .background(Color.gray.opacity(0.3))

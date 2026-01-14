@@ -3,11 +3,12 @@ import SwiftUI
 struct InputPillView: View {
     let position: CGPoint
     var windowName: String? = nil
-    let onSubmit: (String, String?) -> Void
+    let onSubmit: (String, String?, WatchMode) -> Void
     let onCancel: () -> Void
 
     @State private var watcherName: String = ""
     @State private var keyword: String = ""
+    @State private var watchMode: WatchMode = .visual
     @State private var isVisible: Bool = false
     @FocusState private var isNameFocused: Bool
 
@@ -26,9 +27,34 @@ struct InputPillView: View {
                 .padding(.bottom, 4)
             }
 
+            // Watch Mode Toggle (v3.0)
+            HStack(spacing: 8) {
+                ForEach(WatchMode.allCases, id: \.self) { mode in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            watchMode = mode
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: mode.icon)
+                                .font(.caption)
+                            Text(mode.displayName)
+                                .font(.caption)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(watchMode == mode ? Color.kleinBlue : Color.clear)
+                        .foregroundColor(watchMode == mode ? .white : .secondary)
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.bottom, 4)
+
             // Name input
             HStack {
-                Image(systemName: "pawprint.fill")
+                Image(systemName: watchMode.icon)
                     .foregroundColor(.kleinBlue)
                     .font(.caption)
 
@@ -48,11 +74,19 @@ struct InputPillView: View {
                     .foregroundColor(.secondary)
                     .font(.caption)
 
-                TextField("Keyword to watch (optional)", text: $keyword)
+                TextField(watchMode == .audio ? "Keyword to listen for..." : "Keyword to watch (optional)", text: $keyword)
                     .textFieldStyle(.plain)
                     .onSubmit {
                         submitIfValid()
                     }
+            }
+
+            // Audio mode hint
+            if watchMode == .audio {
+                Text("Listens to system audio for spoken keywords")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             // Action buttons
@@ -103,7 +137,7 @@ struct InputPillView: View {
     private func submitIfValid() {
         guard !watcherName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         let trimmedKeyword = keyword.trimmingCharacters(in: .whitespaces)
-        onSubmit(watcherName, trimmedKeyword.isEmpty ? nil : trimmedKeyword)
+        onSubmit(watcherName, trimmedKeyword.isEmpty ? nil : trimmedKeyword, watchMode)
     }
 }
 
@@ -112,8 +146,8 @@ struct InputPillView: View {
         Color.gray.opacity(0.3)
         InputPillView(
             position: CGPoint(x: 200, y: 200),
-            onSubmit: { name, keyword in
-                print("Created: \(name), keyword: \(keyword ?? "none")")
+            onSubmit: { name, keyword, watchMode in
+                print("Created: \(name), keyword: \(keyword ?? "none"), mode: \(watchMode)")
             },
             onCancel: {
                 print("Cancelled")

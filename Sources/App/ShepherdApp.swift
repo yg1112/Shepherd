@@ -1,7 +1,9 @@
 import SwiftUI
+import UserNotifications
 
 @main
 struct ShepherdApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState.shared
     @StateObject private var hotkeyManager = HotkeyManager.shared
     @StateObject private var watcherManager = WatcherManager.shared
@@ -10,6 +12,7 @@ struct ShepherdApp: App {
         // Force initialization of managers
         _ = WatcherManager.shared
         _ = HotkeyManager.shared
+        _ = OverlayWindowController.shared  // Initialize to start mark update timer
         NSLog("[Shepherd] App initialized")
     }
 
@@ -31,56 +34,97 @@ struct ShepherdApp: App {
     }
 }
 
-// MARK: - Menu Bar Icon
+// MARK: - App Delegate for Notifications
+class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Set up notification center delegate
+        UNUserNotificationCenter.current().delegate = self
+
+        // Register notification categories with actions
+        let acknowledgeAction = UNNotificationAction(
+            identifier: "ACKNOWLEDGE_ACTION",
+            title: "Acknowledge",
+            options: [.foreground]
+        )
+
+        let category = UNNotificationCategory(
+            identifier: "SHEPHERD_ALERT",
+            actions: [acknowledgeAction],
+            intentIdentifiers: [],
+            options: []
+        )
+
+        UNUserNotificationCenter.current().setNotificationCategories([category])
+
+        // Initialize OverlayWindowController to start the mark update timer
+        _ = OverlayWindowController.shared
+        NSLog("[Shepherd] AppDelegate initialized, mark timer should be running")
+    }
+
+    // Show notifications when app is in foreground
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        NSLog("[Shepherd] Notification will present: \(notification.request.content.body)")
+        completionHandler([.banner, .sound, .badge])
+    }
+
+    // Handle notification actions
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        NSLog("[Shepherd] Notification action: \(response.actionIdentifier)")
+
+        if response.actionIdentifier == "ACKNOWLEDGE_ACTION" ||
+           response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+            Task { @MainActor in
+                AppState.shared.acknowledgeAlert()
+            }
+        }
+
+        completionHandler()
+    }
+}
+
+// MARK: - Menu Bar Icon (Static)
 struct MenuBarIcon: View {
     let state: ShepherdState
 
-    @State private var isAnimating = false
-    @State private var scale: CGFloat = 1.0
-
-    var iconColor: Color {
-        switch state {
-        case .idle:
-            return .primary
-        case .selecting:
-            return .kleinBlue
-        case .monitoring:
-            return .kleinBlue
-        case .triggered:
-            return .alertOrange
-        }
-    }
+    @State private var isFlashing = false
+    @State private var flashTimer: Timer?
 
     var body: some View {
-        Image("MenuBarIcon")
-            .renderingMode(.template)
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .frame(width: 18, height: 18)
-            .foregroundColor(iconColor)
-            .opacity(isTriggered ? (isAnimating ? 0.5 : 1.0) : 1.0)
-            .scaleEffect(isMonitoring ? scale : 1.0)
-            .animation(isTriggered ? ShepherdAnimation.alertPulse : .default, value: isAnimating)
-            .onAppear {
-                if isTriggered {
-                    isAnimating = true
-                }
-                if isMonitoring {
-                    startBreathingAnimation()
-                }
+        Group {
+            if isMonitoring || isSelecting {
+                // 监控中/选择中：黑色狗
+                Image("MenuBarIconActive")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 22, height: 22)
+            } else if isTriggered {
+                // 触发状态：黑色狗闪烁
+                Image("MenuBarIconActive")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 22, height: 22)
+                    .opacity(isFlashing ? 0.3 : 1.0)
+            } else {
+                // 空闲状态：白色狗
+                Image("MenuBarIconIdle")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 22, height: 22)
             }
-            .onChange(of: state) { newState in
-                if case .triggered = newState {
-                    isAnimating = true
-                } else {
-                    isAnimating = false
-                }
-                if case .monitoring = newState {
-                    startBreathingAnimation()
-                } else if case .idle = newState {
-                    scale = 1.0
-                }
-            }
+        }
+        .onAppear {
+            updateFlashState()
+        }
+        .onChange(of: state) { _ in
+            updateFlashState()
+        }
+        .onDisappear {
+            stopFlashing()
+        }
     }
 
     private var isTriggered: Bool {
@@ -93,9 +137,24 @@ struct MenuBarIcon: View {
         return false
     }
 
-    private func startBreathingAnimation() {
-        withAnimation(Animation.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-            scale = 1.15
+    private var isSelecting: Bool {
+        if case .selecting = state { return true }
+        return false
+    }
+
+    private func updateFlashState() {
+        stopFlashing()
+        if isTriggered {
+            flashTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+                isFlashing.toggle()
+            }
+            RunLoop.main.add(flashTimer!, forMode: .common)
         }
+    }
+
+    private func stopFlashing() {
+        flashTimer?.invalidate()
+        flashTimer = nil
+        isFlashing = false
     }
 }

@@ -14,33 +14,74 @@ final class OverlayWindowController: ObservableObject {
     private var overlayWindows: [NSWindow] = []
     private var markWindows: [UUID: NSWindow] = [:]
     private var markUpdateTimer: Timer?
+    private var lastPositions: [UUID: CGPoint] = [:]
 
     private init() {
         startMarkUpdateTimer()
     }
 
     private func startMarkUpdateTimer() {
-        markUpdateTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+        // Stop existing timer if any
+        markUpdateTimer?.invalidate()
+
+        // 20 FPS for smooth tracking (0.05s interval)
+        markUpdateTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.updateMarkPositions()
             }
         }
+        // Ensure timer runs even during UI interactions
+        RunLoop.main.add(markUpdateTimer!, forMode: .common)
+        NSLog("[Shepherd] Mark update timer started")
     }
 
     private func updateMarkPositions() {
-        for watcher in AppState.shared.watchers {
+        let watchers = AppState.shared.watchers
+        guard !watchers.isEmpty else { return }
+
+        for watcher in watchers {
+            // If mark window doesn't exist, create it
+            if markWindows[watcher.id] == nil {
+                showMark(for: watcher)
+            }
+
             if let existingWindow = markWindows[watcher.id] {
                 let region = watcher.currentRegion
                 guard let screen = NSScreen.main else { continue }
                 let screenHeight = screen.frame.height
                 let size: CGFloat = 80
 
-                let newOrigin = CGPoint(
+                let targetOrigin = CGPoint(
                     x: region.minX,
                     y: screenHeight - region.minY - size
                 )
 
-                existingWindow.setFrameOrigin(newOrigin)
+                // Get current position from lastPositions cache (more accurate than window.frame during animation)
+                let lastPosition = lastPositions[watcher.id] ?? existingWindow.frame.origin
+                let distance = hypot(targetOrigin.x - lastPosition.x, targetOrigin.y - lastPosition.y)
+
+                // Only update if there's significant movement
+                if distance > 2 {
+                    // Use smooth interpolation: move 30% toward target each frame
+                    let interpolationFactor: CGFloat = 0.3
+                    let newOrigin = CGPoint(
+                        x: lastPosition.x + (targetOrigin.x - lastPosition.x) * interpolationFactor,
+                        y: lastPosition.y + (targetOrigin.y - lastPosition.y) * interpolationFactor
+                    )
+
+                    // Log when moving significantly (only once per big move to reduce spam)
+                    if distance > 50 {
+                        shepherdLog("Mark moving: '\(watcher.name)' distance=\(Int(distance))")
+                    }
+
+                    // Update window position directly (no animation conflicts)
+                    existingWindow.setFrameOrigin(newOrigin)
+                    lastPositions[watcher.id] = newOrigin
+                } else if distance > 0.5 {
+                    // Snap to final position for tiny movements
+                    existingWindow.setFrameOrigin(targetOrigin)
+                    lastPositions[watcher.id] = targetOrigin
+                }
             }
         }
     }

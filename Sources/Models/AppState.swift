@@ -30,7 +30,27 @@ enum ShepherdState: Equatable {
     case triggered(watcherId: UUID)
 }
 
-// MARK: - Watcher Model (v2.0 - Window Sticky)
+// MARK: - Watch Mode (v3.0)
+enum WatchMode: String, Codable, CaseIterable {
+    case visual = "visual"  // Screen capture + OCR
+    case audio = "audio"    // System audio + Speech recognition
+
+    var icon: String {
+        switch self {
+        case .visual: return "eye.fill"
+        case .audio: return "ear.fill"
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .visual: return "Visual"
+        case .audio: return "Audio"
+        }
+    }
+}
+
+// MARK: - Watcher Model (v3.0 - Window Sticky + Audio)
 struct Watcher: Identifiable, Codable {
     let id: UUID
     var name: String
@@ -41,6 +61,9 @@ struct Watcher: Identifiable, Codable {
     var windowOwnerName: String?
     var relativeRegion: CGRect
     var absoluteRegion: CGRect
+
+    // v3.0: Watch mode (visual/audio)
+    var watchMode: WatchMode
 
     var keyword: String?
     var isActive: Bool
@@ -66,7 +89,8 @@ struct Watcher: Identifiable, Codable {
 
     init(name: String, region: CGRect, keyword: String? = nil,
          windowID: CGWindowID? = nil, windowTitle: String? = nil,
-         windowOwnerName: String? = nil, relativeRegion: CGRect? = nil) {
+         windowOwnerName: String? = nil, relativeRegion: CGRect? = nil,
+         watchMode: WatchMode = .visual) {
         self.id = UUID()
         self.name = name
         self.absoluteRegion = region
@@ -78,6 +102,7 @@ struct Watcher: Identifiable, Codable {
         self.windowTitle = windowTitle
         self.windowOwnerName = windowOwnerName
         self.relativeRegion = relativeRegion ?? region
+        self.watchMode = watchMode
     }
 
     // Custom Codable
@@ -85,6 +110,7 @@ struct Watcher: Identifiable, Codable {
         case id, name, keyword, isActive, createdAt, lastTriggeredAt
         case targetWindowID, windowTitle, windowOwnerName
         case relativeRegion, absoluteRegion, region
+        case watchMode
     }
 
     init(from decoder: Decoder) throws {
@@ -114,6 +140,9 @@ struct Watcher: Identifiable, Codable {
             absoluteRegion = .zero
             relativeRegion = .zero
         }
+
+        // v3.0: Watch mode (default to visual for backward compatibility)
+        watchMode = try container.decodeIfPresent(WatchMode.self, forKey: .watchMode) ?? .visual
     }
 
     func encode(to encoder: Encoder) throws {
@@ -131,6 +160,7 @@ struct Watcher: Identifiable, Codable {
         try container.encodeIfPresent(windowOwnerName, forKey: .windowOwnerName)
         try container.encode(relativeRegion, forKey: .relativeRegion)
         try container.encode(absoluteRegion, forKey: .absoluteRegion)
+        try container.encode(watchMode, forKey: .watchMode)
     }
 }
 
@@ -198,6 +228,8 @@ struct WindowTracker {
                   let height = boundsDict["Height"] as? CGFloat else { continue }
             return CGRect(x: x, y: y, width: width, height: height)
         }
+        // Debug: Window not found
+        NSLog("[Shepherd] WindowTracker: Window ID %d not found in %d windows", windowID, windows.count)
         return nil
     }
 }
@@ -237,7 +269,7 @@ final class AppState: ObservableObject {
         pendingWindowInfo = windowInfo
     }
 
-    func addWatcher(name: String, keyword: String?) {
+    func addWatcher(name: String, keyword: String?, watchMode: WatchMode = .visual) {
         guard let region = pendingRegion else { return }
         let effectiveKeyword = (keyword?.isEmpty ?? true) ? name : keyword
 
@@ -251,11 +283,12 @@ final class AppState: ObservableObject {
             )
             watcher = Watcher(name: name, region: region, keyword: effectiveKeyword,
                               windowID: windowInfo.windowID, windowTitle: windowInfo.title,
-                              windowOwnerName: windowInfo.ownerName, relativeRegion: relativeRegion)
-            shepherdLog("Adding STICKY watcher: '\(name)' bound to '\(windowInfo.ownerName ?? "Unknown")' (ID: \(windowInfo.windowID))")
+                              windowOwnerName: windowInfo.ownerName, relativeRegion: relativeRegion,
+                              watchMode: watchMode)
+            shepherdLog("Adding STICKY \(watchMode.displayName) watcher: '\(name)' bound to '\(windowInfo.ownerName ?? "Unknown")' (ID: \(windowInfo.windowID))")
         } else {
-            watcher = Watcher(name: name, region: region, keyword: effectiveKeyword)
-            shepherdLog("Adding watcher: '\(name)' at absolute position")
+            watcher = Watcher(name: name, region: region, keyword: effectiveKeyword, watchMode: watchMode)
+            shepherdLog("Adding \(watchMode.displayName) watcher: '\(name)' at absolute position")
         }
 
         watchers.append(watcher)

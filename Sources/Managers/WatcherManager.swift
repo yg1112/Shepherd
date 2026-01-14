@@ -3,6 +3,9 @@ import Vision
 import Combine
 import UserNotifications
 import os.log
+import ImageIO
+import UniformTypeIdentifiers
+import AppKit
 
 private let logger = Logger(subsystem: "com.shepherd.app", category: "WatcherManager")
 
@@ -15,17 +18,57 @@ final class WatcherManager: ObservableObject {
     private var unchangedDurations: [UUID: TimeInterval] = [:]
     private var cancellables = Set<AnyCancellable>()
 
+    // Audio monitoring (v3.0)
+    private var isAudioMonitoringActive: Bool = false
+
     private init() {
         setupNotifications()
         observeAppState()
+        setupAudioCallback()
         logger.info("WatcherManager initialized")
         NSLog("[Shepherd] WatcherManager initialized")
     }
 
+    // MARK: - Audio Callback Setup
+    private func setupAudioCallback() {
+        AudioCaptureManager.shared.onAudioChunkReady = { [weak self] samples in
+            Task { @MainActor in
+                await self?.processAudioChunk(samples)
+            }
+        }
+    }
+
+    private func processAudioChunk(_ samples: [Float]) async {
+        // Get keywords from active audio watchers
+        let audioWatchers = AppState.shared.watchers.filter { $0.isActive && $0.watchMode == .audio }
+        guard !audioWatchers.isEmpty else { return }
+
+        let keywords = audioWatchers.compactMap { $0.keyword }
+        guard !keywords.isEmpty else { return }
+
+        NSLog("[Shepherd] Processing audio chunk for keywords: \(keywords)")
+
+        // Transcribe and check for keywords
+        let result = await WhisperManager.shared.transcribeAndCheckKeywords(samples, keywords: keywords)
+
+        if let matchedKeyword = result.matchedKeyword {
+            // Find the watcher that matches this keyword
+            if let watcher = audioWatchers.first(where: { $0.keyword?.localizedCaseInsensitiveCompare(matchedKeyword) == .orderedSame }) {
+                NSLog("[Shepherd] AUDIO KEYWORD DETECTED: '\(matchedKeyword)' for watcher '\(watcher.name)'")
+                triggerAlert(for: watcher, reason: "Heard keyword '\(matchedKeyword)' in audio")
+            }
+        }
+    }
+
     // MARK: - Setup
     private func setupNotifications() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
-            NSLog("[Shepherd] Notification permission: \(granted), error: \(String(describing: error))")
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            shepherdLog("Notification permission requested: granted=\(granted), error=\(String(describing: error))")
+        }
+
+        // Check current notification settings
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            shepherdLog("Notification settings: authorizationStatus=\(settings.authorizationStatus.rawValue), alertSetting=\(settings.alertSetting.rawValue), soundSetting=\(settings.soundSetting.rawValue)")
         }
     }
 
@@ -37,60 +80,96 @@ final class WatcherManager: ObservableObject {
                 if watchers.isEmpty {
                     self?.stopMonitoring()
                 } else {
-                    self?.startMonitoring()
+                    self?.updateMonitoringForWatchers(watchers)
                 }
             }
             .store(in: &cancellables)
     }
 
-    // MARK: - Monitoring Loop
-    func startMonitoring() {
-        guard captureTimer == nil else {
-            NSLog("[Shepherd] Timer already running")
-            return
+    /// Dynamically update monitoring based on watcher types
+    private func updateMonitoringForWatchers(_ watchers: [Watcher]) {
+        let hasVisualWatchers = watchers.contains { $0.isActive && $0.watchMode == .visual }
+        let hasAudioWatchers = watchers.contains { $0.isActive && $0.watchMode == .audio }
+
+        // Handle visual monitoring
+        if hasVisualWatchers && captureTimer == nil {
+            NSLog("[Shepherd] Starting visual monitoring")
+            Task { await captureAndAnalyze() }
+            captureTimer = Timer.scheduledTimer(withTimeInterval: AppState.shared.captureInterval, repeats: true) { [weak self] _ in
+                Task { @MainActor in await self?.captureAndAnalyze() }
+            }
+            RunLoop.main.add(captureTimer!, forMode: .common)
+        } else if !hasVisualWatchers && captureTimer != nil {
+            NSLog("[Shepherd] Stopping visual monitoring (no visual watchers)")
+            captureTimer?.invalidate()
+            captureTimer = nil
+            previousFrames.removeAll()
+            unchangedDurations.removeAll()
         }
 
-        NSLog("[Shepherd] Starting monitoring with interval: \(AppState.shared.captureInterval)s")
-
-        // Run immediately once
-        Task {
-            await captureAndAnalyze()
-        }
-
-        captureTimer = Timer.scheduledTimer(withTimeInterval: AppState.shared.captureInterval, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                await self?.captureAndAnalyze()
+        // Handle audio monitoring - START only if audio watchers exist, STOP when none exist
+        if hasAudioWatchers && !isAudioMonitoringActive {
+            NSLog("[Shepherd] Starting audio monitoring")
+            isAudioMonitoringActive = true
+            Task {
+                do {
+                    try await AudioCaptureManager.shared.startCapture()
+                } catch {
+                    NSLog("[Shepherd] Failed to start audio capture: \(error)")
+                    isAudioMonitoringActive = false
+                }
+            }
+        } else if !hasAudioWatchers && isAudioMonitoringActive {
+            NSLog("[Shepherd] Stopping audio monitoring (no audio watchers)")
+            isAudioMonitoringActive = false
+            Task {
+                await AudioCaptureManager.shared.stopCapture()
             }
         }
-        RunLoop.main.add(captureTimer!, forMode: .common)
+    }
+
+    // MARK: - Monitoring Loop
+    func startMonitoring() {
+        let watchers = AppState.shared.watchers
+        guard !watchers.isEmpty else { return }
+        updateMonitoringForWatchers(watchers)
     }
 
     func stopMonitoring() {
         NSLog("[Shepherd] Stopping monitoring")
+
+        // Stop visual monitoring
         captureTimer?.invalidate()
         captureTimer = nil
         previousFrames.removeAll()
         unchangedDurations.removeAll()
+
+        // Stop audio monitoring
+        if isAudioMonitoringActive {
+            isAudioMonitoringActive = false
+            Task {
+                await AudioCaptureManager.shared.stopCapture()
+            }
+        }
     }
 
-    // MARK: - Capture & Analyze
+    // MARK: - Capture & Analyze (Visual Mode Only)
     private func captureAndAnalyze() async {
-        NSLog("[Shepherd] captureAndAnalyze called, watchers: \(AppState.shared.watchers.count)")
+        let visualWatchers = AppState.shared.watchers.filter { $0.isActive && $0.watchMode == .visual }
+        shepherdLog("captureAndAnalyze called, visual watchers: \(visualWatchers.count)")
 
-        for watcher in AppState.shared.watchers where watcher.isActive {
+        for watcher in visualWatchers {
             do {
                 let regionToCapture = watcher.currentRegion
-                NSLog("[Shepherd] Capturing region for '\(watcher.name)': \(regionToCapture)")
                 let image = try await captureRegion(regionToCapture)
-                NSLog("[Shepherd] Captured image: \(image.width)x\(image.height)")
 
                 // OCR Analysis
                 if AppState.shared.enableOCR, let keyword = watcher.keyword, !keyword.isEmpty {
                     let text = await performOCR(on: image)
-                    NSLog("[Shepherd] OCR result for '\(watcher.name)': '\(text)'")
+                    shepherdLog("OCR for '\(watcher.name)': keyword='\(keyword)', found='\(text.prefix(100))'")
 
                     if text.localizedCaseInsensitiveContains(keyword) {
-                        NSLog("[Shepherd] KEYWORD FOUND: '\(keyword)' in '\(text)'")
+                        shepherdLog("KEYWORD FOUND: '\(keyword)' in OCR text!")
                         triggerAlert(for: watcher, reason: "Keyword '\(keyword)' detected")
                         continue
                     }
@@ -205,35 +284,121 @@ final class WatcherManager: ObservableObject {
 
     // MARK: - Alert Trigger
     private func triggerAlert(for watcher: Watcher, reason: String) {
-        NSLog("[Shepherd] ALERT TRIGGERED: \(watcher.name) - \(reason)")
+        shepherdLog("ALERT TRIGGERED: \(watcher.name) - \(reason)")
 
         AppState.shared.triggerWatcher(watcher.id)
 
-        sendNotification(watcher: watcher, reason: reason)
-        sendWebhook(watcher: watcher, reason: reason)
-        OverlayWindowController.shared.updateAllMarks()
-    }
+        Task {
+            var evidenceImage: CGImage? = nil
+            var savedURL: URL? = nil
 
-    private func sendNotification(watcher: Watcher, reason: String) {
-        let content = UNMutableNotificationContent()
-        content.title = "Shepherd Alert"
-        content.body = "\(watcher.name): \(reason)"
-        content.sound = .default
+            // Only capture screenshot for visual mode watchers
+            if watcher.watchMode == .visual {
+                evidenceImage = await captureEvidenceScreenshot(for: watcher)
+                savedURL = saveEvidenceImage(evidenceImage, for: watcher)
+            }
 
-        let request = UNNotificationRequest(
-            identifier: UUID().uuidString,
-            content: content,
-            trigger: nil
-        )
-
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                NSLog("[Shepherd] Notification error: \(error)")
+            await MainActor.run {
+                sendNotification(watcher: watcher, reason: reason, evidenceURL: savedURL)
+                sendWebhook(watcher: watcher, reason: reason, evidenceImage: evidenceImage)
+                OverlayWindowController.shared.updateAllMarks()
             }
         }
     }
 
-    private func sendWebhook(watcher: Watcher, reason: String) {
+    // MARK: - Evidence Capture
+    private func captureEvidenceScreenshot(for watcher: Watcher) async -> CGImage? {
+        let region = watcher.currentRegion
+        NSLog("[Shepherd] Capturing evidence screenshot for region: \(region)")
+
+        guard let image = CGWindowListCreateImage(
+            region,
+            .optionOnScreenOnly,
+            kCGNullWindowID,
+            [.boundsIgnoreFraming, .bestResolution]
+        ) else {
+            NSLog("[Shepherd] Failed to capture evidence screenshot")
+            return nil
+        }
+
+        NSLog("[Shepherd] Evidence captured: \(image.width)x\(image.height)")
+        return image
+    }
+
+    private func saveEvidenceImage(_ image: CGImage?, for watcher: Watcher) -> URL? {
+        guard let image = image else { return nil }
+
+        let tempDir = FileManager.default.temporaryDirectory
+        let filename = "shepherd_evidence_\(watcher.id.uuidString)_\(Date().timeIntervalSince1970).png"
+        let fileURL = tempDir.appendingPathComponent(filename)
+
+        guard let destination = CGImageDestinationCreateWithURL(fileURL as CFURL, UTType.png.identifier as CFString, 1, nil) else {
+            NSLog("[Shepherd] Failed to create image destination")
+            return nil
+        }
+
+        CGImageDestinationAddImage(destination, image, nil)
+
+        if CGImageDestinationFinalize(destination) {
+            NSLog("[Shepherd] Evidence saved to: \(fileURL.path)")
+            return fileURL
+        }
+
+        NSLog("[Shepherd] Failed to save evidence image")
+        return nil
+    }
+
+    private func sendNotification(watcher: Watcher, reason: String, evidenceURL: URL?) {
+        shepherdLog("Sending notification for watcher: \(watcher.name), reason: \(reason)")
+
+        // Check notification settings before sending
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            shepherdLog("Before send - authStatus=\(settings.authorizationStatus.rawValue), alertSetting=\(settings.alertSetting.rawValue)")
+
+            guard settings.authorizationStatus == .authorized else {
+                shepherdLog("ERROR: Notifications not authorized! Status: \(settings.authorizationStatus.rawValue)")
+                return
+            }
+
+            let content = UNMutableNotificationContent()
+            content.title = "Shepherd Alert"
+            content.body = "\(watcher.name): \(reason)"
+            content.sound = .default
+            content.categoryIdentifier = "SHEPHERD_ALERT"
+            content.interruptionLevel = .timeSensitive  // Make notification more prominent
+
+            // Attach evidence screenshot if available
+            if let evidenceURL = evidenceURL {
+                do {
+                    let attachment = try UNNotificationAttachment(
+                        identifier: "evidence",
+                        url: evidenceURL,
+                        options: [UNNotificationAttachmentOptionsTypeHintKey: UTType.png.identifier]
+                    )
+                    content.attachments = [attachment]
+                    shepherdLog("Evidence attached to notification")
+                } catch {
+                    shepherdLog("Failed to attach evidence: \(error)")
+                }
+            }
+
+            let request = UNNotificationRequest(
+                identifier: UUID().uuidString,
+                content: content,
+                trigger: nil
+            )
+
+            UNUserNotificationCenter.current().add(request) { error in
+                if let error = error {
+                    shepherdLog("Notification error: \(error)")
+                } else {
+                    shepherdLog("Notification sent successfully!")
+                }
+            }
+        }
+    }
+
+    private func sendWebhook(watcher: Watcher, reason: String, evidenceImage: CGImage?) {
         guard !AppState.shared.webhookURL.isEmpty,
               let url = URL(string: AppState.shared.webhookURL) else {
             return
@@ -243,7 +408,7 @@ final class WatcherManager: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "watcher_name": watcher.name,
             "watcher_id": watcher.id.uuidString,
             "reason": reason,
@@ -256,8 +421,24 @@ final class WatcherManager: ObservableObject {
             ]
         ]
 
+        // Add Base64 encoded evidence image
+        if let image = evidenceImage {
+            if let base64String = imageToBase64(image) {
+                payload["evidence_image_base64"] = base64String
+                NSLog("[Shepherd] Evidence image included in webhook (Base64)")
+            }
+        }
+
         request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
         URLSession.shared.dataTask(with: request).resume()
+    }
+
+    private func imageToBase64(_ image: CGImage) -> String? {
+        let bitmapRep = NSBitmapImageRep(cgImage: image)
+        guard let pngData = bitmapRep.representation(using: .png, properties: [:]) else {
+            return nil
+        }
+        return pngData.base64EncodedString()
     }
 }
 

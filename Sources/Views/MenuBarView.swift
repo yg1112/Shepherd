@@ -121,23 +121,6 @@ struct MenuBarView: View {
             .padding(.horizontal, 8)
             .background(Color.primary.opacity(0.05))
             .cornerRadius(6)
-
-            if case .triggered = appState.currentState {
-                Button(action: {
-                    appState.acknowledgeAlert()
-                }) {
-                    HStack {
-                        Image(systemName: "checkmark.circle")
-                        Text("Acknowledge Alert")
-                        Spacer()
-                    }
-                }
-                .buttonStyle(.plain)
-                .padding(.vertical, 6)
-                .padding(.horizontal, 8)
-                .background(Color.alertOrange.opacity(0.2))
-                .cornerRadius(6)
-            }
         }
     }
 
@@ -174,41 +157,71 @@ struct MenuBarView: View {
 struct WatcherRowView: View {
     let watcher: Watcher
     let onDelete: () -> Void
+    @EnvironmentObject var appState: AppState
 
     @State private var isHovering = false
 
+    private var isTriggered: Bool {
+        if case .triggered(let id) = appState.currentState {
+            return id == watcher.id
+        }
+        return false
+    }
+
     var body: some View {
-        HStack {
-            Image(systemName: "pawprint.fill")
-                .font(.caption)
-                .foregroundColor(watcher.isActive ? .kleinBlue : .secondary)
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(watcher.name)
+        VStack(spacing: 4) {
+            HStack {
+                // Icon based on watch mode
+                Image(systemName: watcher.watchMode == .audio ? "ear.fill" : "eye.fill")
                     .font(.caption)
-                    .lineLimit(1)
+                    .foregroundColor(isTriggered ? .alertOrange : (watcher.isActive ? .kleinBlue : .secondary))
 
-                if let keyword = watcher.keyword, !keyword.isEmpty {
-                    Text("Keyword: \(keyword)")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(watcher.name)
+                        .font(.caption)
+                        .lineLimit(1)
+
+                    if let keyword = watcher.keyword, !keyword.isEmpty {
+                        Text("Keyword: \(keyword)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                if isHovering {
+                    Button(action: onDelete) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
+            .padding(.vertical, 4)
+            .padding(.horizontal, 8)
+            .background(isTriggered ? Color.alertOrange.opacity(0.15) : (isHovering ? Color.primary.opacity(0.05) : Color.clear))
+            .cornerRadius(4)
 
-            Spacer()
-
-            if isHovering {
-                Button(action: onDelete) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
+            // Acknowledge button for this specific watcher when triggered
+            if isTriggered {
+                Button(action: {
+                    appState.acknowledgeAlert()
+                }) {
+                    HStack {
+                        Image(systemName: "checkmark.circle")
+                        Text("Acknowledge")
+                        Spacer()
+                    }
+                    .font(.caption)
                 }
                 .buttonStyle(.plain)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 8)
+                .background(Color.alertOrange.opacity(0.2))
+                .cornerRadius(4)
             }
         }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 8)
-        .background(isHovering ? Color.primary.opacity(0.05) : Color.clear)
-        .cornerRadius(4)
         .onHover { hovering in
             isHovering = hovering
         }

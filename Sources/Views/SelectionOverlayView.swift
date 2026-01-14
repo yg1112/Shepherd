@@ -41,8 +41,8 @@ struct SelectionOverlayView: View {
                             y: rect.maxY + 60
                         ),
                         windowName: detectedWindowInfo?.ownerName,
-                        onSubmit: { name, keyword in
-                            appState.addWatcher(name: name, keyword: keyword)
+                        onSubmit: { name, keyword, watchMode in
+                            appState.addWatcher(name: name, keyword: keyword, watchMode: watchMode)
                             OverlayWindowController.shared.hide()
                             OverlayWindowController.shared.updateAllMarks()
                         },
