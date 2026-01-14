@@ -10,6 +10,10 @@ struct SelectionOverlayView: View {
     @State private var isVisible: Bool = false
     @State private var detectedWindowInfo: (windowID: CGWindowID, frame: CGRect, title: String?, ownerName: String?)? = nil
 
+    // Smart Snap state
+    @State private var snappedElementFrame: CGRect? = nil
+    @State private var isSnapping: Bool = false
+
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -20,6 +24,11 @@ struct SelectionOverlayView: View {
                 // Window highlight (Klein Blue border around detected window)
                 if let windowInfo = detectedWindowInfo, !showInputPill {
                     WindowHighlightView(frame: windowInfo.frame)
+                }
+
+                // Smart Snap highlight (magnetic element detection)
+                if let snapFrame = snappedElementFrame, !showInputPill, dragStart == nil {
+                    SmartSnapHighlightView(frame: snapFrame, isActive: isSnapping)
                 }
 
                 // Selection rectangle
@@ -57,18 +66,24 @@ struct SelectionOverlayView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
             .gesture(dragGesture)
+            .onTapGesture {
+                // Smart Snap: single click to select snapped element
+                handleSnapClick()
+            }
             .onContinuousHover { phase in
                 switch phase {
                 case .active(let location):
                     mousePosition = location
+
+                    // Smart Snap: detect UI element under cursor
+                    updateSmartSnap(at: location)
+
                     // Only update window info when we find a new window (don't clear it)
                     if let newWindow = WindowTracker.getWindowAt(point: location) {
                         if detectedWindowInfo?.windowID != newWindow.windowID {
                             shepherdLog("Window detected: '\(newWindow.ownerName ?? "Unknown")' ID:\(newWindow.windowID) frame:\(newWindow.frame)")
                         }
                         detectedWindowInfo = newWindow
-                    } else {
-                        shepherdLog("No window found at position: \(location)")
                     }
                 case .ended:
                     break
@@ -109,6 +124,9 @@ struct SelectionOverlayView: View {
             .onChanged { value in
                 if dragStart == nil {
                     dragStart = value.startLocation
+                    // Clear snap when starting to drag
+                    snappedElementFrame = nil
+                    isSnapping = false
                 }
                 dragCurrent = value.location
             }
@@ -125,6 +143,51 @@ struct SelectionOverlayView: View {
                 }
             }
     }
+
+    // MARK: - Smart Snap
+
+    /// Update smart snap detection at cursor position
+    private func updateSmartSnap(at point: CGPoint) {
+        guard NSScreen.main != nil else { return }
+        let screenPoint = CGPoint(x: point.x, y: point.y)
+
+        // Throttle snap detection to reduce CPU usage
+        Task { @MainActor in
+            if let elementFrame = AccessibilityManager.shared.findSnappableElement(at: screenPoint) {
+                // Only update if frame changed significantly
+                if snappedElementFrame == nil ||
+                   abs(elementFrame.minX - (snappedElementFrame?.minX ?? 0)) > 5 ||
+                   abs(elementFrame.minY - (snappedElementFrame?.minY ?? 0)) > 5 {
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        snappedElementFrame = elementFrame
+                        isSnapping = true
+                    }
+                }
+            } else {
+                if snappedElementFrame != nil {
+                    withAnimation(.easeOut(duration: 0.1)) {
+                        isSnapping = false
+                    }
+                    // Delay clearing to allow fade out
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        if !isSnapping {
+                            snappedElementFrame = nil
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Handle single click to snap select
+    private func handleSnapClick() {
+        if let snapFrame = snappedElementFrame {
+            appState.completeSelection(region: snapFrame, windowInfo: detectedWindowInfo)
+            withAnimation(ShepherdAnimation.springBounce) {
+                showInputPill = true
+            }
+        }
+    }
 }
 
 // MARK: - Window Highlight View (Klein Blue border around detected window)
@@ -138,6 +201,49 @@ struct WindowHighlightView: View {
             .shadow(color: .kleinBlue.opacity(0.5), radius: 16)
             .frame(width: frame.width, height: frame.height)
             .position(x: frame.midX, y: frame.midY)
+    }
+}
+
+// MARK: - Smart Snap Highlight View (Magnetic element detection)
+struct SmartSnapHighlightView: View {
+    let frame: CGRect
+    let isActive: Bool
+
+    var body: some View {
+        ZStack {
+            // Glow effect
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(Color.green.opacity(0.6), lineWidth: 2)
+                .shadow(color: .green, radius: isActive ? 8 : 4)
+                .shadow(color: .green.opacity(0.5), radius: isActive ? 12 : 6)
+
+            // Inner highlight
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.green.opacity(isActive ? 0.15 : 0.05))
+
+            // Snap indicator text
+            if isActive {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Image(systemName: "scope")
+                            .font(.system(size: 10))
+                        Text("Click to snap")
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.green.opacity(0.8))
+                    .cornerRadius(4)
+                    .offset(y: 20)
+                }
+            }
+        }
+        .frame(width: frame.width, height: frame.height)
+        .position(x: frame.midX, y: frame.midY)
+        .opacity(isActive ? 1 : 0.6)
+        .animation(.easeInOut(duration: 0.15), value: isActive)
     }
 }
 

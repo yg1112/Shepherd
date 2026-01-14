@@ -44,6 +44,11 @@ struct MenuBarView: View {
                 Text(statusText)
                     .font(.caption)
                     .foregroundColor(.secondary)
+
+                // Speech processing indicator for audio watchers
+                if hasAudioWatchers {
+                    SpeechStatusIndicator()
+                }
             }
 
             Spacer()
@@ -53,6 +58,10 @@ struct MenuBarView: View {
                 .fill(statusColor)
                 .frame(width: 8, height: 8)
         }
+    }
+
+    private var hasAudioWatchers: Bool {
+        appState.watchers.contains { $0.watchMode == .audio && $0.isActive }
     }
 
     private var statusColor: Color {
@@ -158,6 +167,7 @@ struct WatcherRowView: View {
     let watcher: Watcher
     let onDelete: () -> Void
     @EnvironmentObject var appState: AppState
+    @StateObject private var audioCaptureManager = AudioCaptureManager.shared
 
     @State private var isHovering = false
 
@@ -182,7 +192,7 @@ struct WatcherRowView: View {
                         .lineLimit(1)
 
                     if let keyword = watcher.keyword, !keyword.isEmpty {
-                        Text("Keyword: \(keyword)")
+                        Text(watcher.watchMode == .audio ? "Listening: \(keyword)" : "Keyword: \(keyword)")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
@@ -203,27 +213,104 @@ struct WatcherRowView: View {
             .background(isTriggered ? Color.alertOrange.opacity(0.15) : (isHovering ? Color.primary.opacity(0.05) : Color.clear))
             .cornerRadius(4)
 
-            // Acknowledge button for this specific watcher when triggered
+            // Action buttons for this specific watcher when triggered
             if isTriggered {
-                Button(action: {
-                    appState.acknowledgeAlert()
-                }) {
-                    HStack {
-                        Image(systemName: "checkmark.circle")
-                        Text("Acknowledge")
-                        Spacer()
+                HStack(spacing: 8) {
+                    // Replay button for audio watchers
+                    if watcher.watchMode == .audio {
+                        Button(action: {
+                            if audioCaptureManager.isPlayingReplay {
+                                audioCaptureManager.stopReplay()
+                            } else {
+                                audioCaptureManager.playReplay()
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: audioCaptureManager.isPlayingReplay ? "stop.fill" : "gobackward.30")
+                                Text(audioCaptureManager.isPlayingReplay ? "Stop" : "Replay 30s")
+                            }
+                            .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 8)
+                        .background(Color.kleinBlue.opacity(0.2))
+                        .cornerRadius(4)
                     }
-                    .font(.caption)
+
+                    // Acknowledge button
+                    Button(action: {
+                        audioCaptureManager.stopReplay()
+                        appState.acknowledgeAlert()
+                    }) {
+                        HStack {
+                            Image(systemName: "checkmark.circle")
+                            Text("Acknowledge")
+                        }
+                        .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 8)
+                    .background(Color.alertOrange.opacity(0.2))
+                    .cornerRadius(4)
                 }
-                .buttonStyle(.plain)
-                .padding(.vertical, 4)
-                .padding(.horizontal, 8)
-                .background(Color.alertOrange.opacity(0.2))
-                .cornerRadius(4)
             }
         }
         .onHover { hovering in
             isHovering = hovering
+        }
+    }
+}
+
+// MARK: - Speech Status Indicator
+struct SpeechStatusIndicator: View {
+    @StateObject private var whisperManager = WhisperManager.shared
+
+    var body: some View {
+        HStack(spacing: 4) {
+            // Animated indicator when processing
+            if whisperManager.isProcessing {
+                ProgressView()
+                    .scaleEffect(0.5)
+                    .frame(width: 12, height: 12)
+                Text("Processing speech...")
+                    .font(.caption2)
+                    .foregroundColor(.kleinBlue)
+            } else {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 6, height: 6)
+                Text(statusText)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    private var statusColor: Color {
+        switch whisperManager.modelState {
+        case .ready:
+            return .green
+        case .loading:
+            return .orange
+        case .error:
+            return .red
+        case .notLoaded:
+            return .gray
+        }
+    }
+
+    private var statusText: String {
+        switch whisperManager.modelState {
+        case .ready:
+            return "Speech ready"
+        case .loading:
+            return "Loading speech..."
+        case .error:
+            return "Speech unavailable"
+        case .notLoaded:
+            return "Speech not ready"
         }
     }
 }

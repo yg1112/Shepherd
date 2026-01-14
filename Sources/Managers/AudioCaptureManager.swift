@@ -10,19 +10,30 @@ final class AudioCaptureManager: NSObject, ObservableObject {
 
     @Published var isCapturing: Bool = false
     @Published var audioLevel: Float = 0.0
+    @Published var isPlayingReplay: Bool = false
 
     private var stream: SCStream?
     private var audioBuffer: [Float] = []
     private let bufferLock = NSLock()
 
     // Audio settings for Whisper (16kHz mono)
-    private let targetSampleRate: Double = 16000
+    let targetSampleRate: Double = 16000
     private let targetChannels: Int = 1
 
     // VAD settings
     private var silenceFrameCount: Int = 0
     private let silenceThreshold: Float = 0.01
     private let silenceFramesForCut: Int = 8000  // ~0.5s at 16kHz
+
+    // Replay buffer - stores last 30 seconds of ALL audio
+    private var replayBuffer: [Float] = []
+    private let replayBufferLock = NSLock()
+    private let replayBufferDuration: Double = 30.0  // seconds
+
+    // Audio playback
+    private var audioPlayer: AVAudioPlayer?
+    private var audioEngine: AVAudioEngine?
+    private var playerNode: AVAudioPlayerNode?
 
     // Callbacks
     var onAudioChunkReady: (([Float]) -> Void)?
@@ -97,14 +108,14 @@ final class AudioCaptureManager: NSObject, ObservableObject {
 
     private func processAudioSample(_ sampleBuffer: CMSampleBuffer) {
         guard let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer),
-              let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription) else {
+              CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription) != nil else {
             return
         }
 
         // Get audio buffer list
         var blockBuffer: CMBlockBuffer?
         var audioBufferList = AudioBufferList()
-        var audioBufferListSize = MemoryLayout<AudioBufferList>.size
+        let audioBufferListSize = MemoryLayout<AudioBufferList>.size
 
         let status = CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(
             sampleBuffer,
@@ -138,8 +149,106 @@ final class AudioCaptureManager: NSObject, ObservableObject {
             self.audioLevel = level
         }
 
+        // Store in replay buffer (all audio, not just voice)
+        addToReplayBuffer(floatArray)
+
         // Add to buffer with VAD logic
         processWithVAD(floatArray)
+    }
+
+    // MARK: - Replay Buffer
+
+    private func addToReplayBuffer(_ samples: [Float]) {
+        replayBufferLock.lock()
+        defer { replayBufferLock.unlock() }
+
+        replayBuffer.append(contentsOf: samples)
+
+        // Keep only last 30 seconds
+        let maxSize = Int(targetSampleRate * replayBufferDuration)
+        if replayBuffer.count > maxSize {
+            replayBuffer.removeFirst(replayBuffer.count - maxSize)
+        }
+    }
+
+    /// Get a copy of the replay buffer
+    func getReplayBuffer() -> [Float] {
+        replayBufferLock.lock()
+        defer { replayBufferLock.unlock() }
+        return replayBuffer
+    }
+
+    /// Get replay buffer duration in seconds
+    func getReplayDuration() -> Double {
+        replayBufferLock.lock()
+        defer { replayBufferLock.unlock() }
+        return Double(replayBuffer.count) / targetSampleRate
+    }
+
+    /// Play the replay buffer
+    func playReplay() {
+        let samples = getReplayBuffer()
+        guard !samples.isEmpty else {
+            NSLog("[Shepherd Audio] No audio to replay")
+            return
+        }
+
+        NSLog("[Shepherd Audio] Playing replay: \(Double(samples.count) / targetSampleRate)s")
+
+        // Stop any existing playback
+        stopReplay()
+
+        // Setup audio engine for playback
+        audioEngine = AVAudioEngine()
+        playerNode = AVAudioPlayerNode()
+
+        guard let engine = audioEngine, let player = playerNode else { return }
+
+        engine.attach(player)
+
+        // Create audio format (16kHz mono)
+        guard let format = AVAudioFormat(standardFormatWithSampleRate: targetSampleRate, channels: 1) else {
+            NSLog("[Shepherd Audio] Failed to create audio format")
+            return
+        }
+
+        engine.connect(player, to: engine.mainMixerNode, format: format)
+
+        // Create buffer from samples
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(samples.count)) else {
+            NSLog("[Shepherd Audio] Failed to create audio buffer")
+            return
+        }
+
+        buffer.frameLength = AVAudioFrameCount(samples.count)
+        if let channelData = buffer.floatChannelData?[0] {
+            for i in 0..<samples.count {
+                channelData[i] = samples[i]
+            }
+        }
+
+        do {
+            try engine.start()
+            player.scheduleBuffer(buffer) { [weak self] in
+                Task { @MainActor in
+                    self?.isPlayingReplay = false
+                    NSLog("[Shepherd Audio] Replay finished")
+                }
+            }
+            player.play()
+            isPlayingReplay = true
+        } catch {
+            NSLog("[Shepherd Audio] Failed to start audio engine: \(error)")
+        }
+    }
+
+    /// Stop replay playback
+    func stopReplay() {
+        playerNode?.stop()
+        audioEngine?.stop()
+        audioEngine = nil
+        playerNode = nil
+        isPlayingReplay = false
     }
 
     private func processWithVAD(_ samples: [Float]) {

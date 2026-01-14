@@ -11,6 +11,7 @@
 		09B6A33A54C7D5DDA1594582 /* ShepherdApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84CCD7ED21CEEDFA02AF272D /* ShepherdApp.swift */; };
 		1C4B0DAA61692573E827C339 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90B88BCACBB3FADDC7C77BF7 /* MenuBarView.swift */; };
 		1F6699CAB20FDF32FA070DFC /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36541322D56FB895FB7F06E0 /* Constants.swift */; };
+		1A2B3C4D5E6F7A8B9C0D1E2F /* AccessibilityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0E1D2C3B4A596879A8B7C6D /* AccessibilityManager.swift */; };
 		211EFF68DAE8AA82D3414881 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71181F360C1CE136EB924B2D /* HotkeyManager.swift */; };
 		242785AAC0A03C71468056A2 /* walk_12@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = C9F83A5AF83936B0DFC31680 /* walk_12@2x.png */; };
 		26A25A0258EB7D14B8640607 /* OverlayWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C270C1CBDF022951B2BDB0 /* OverlayWindowController.swift */; };
@@ -48,6 +49,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		F0E1D2C3B4A596879A8B7C6D /* AccessibilityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityManager.swift; sourceTree = "<group>"; };
 		1706A9479930F526D2D8A656 /* walk_03.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = walk_03.png; sourceTree = "<group>"; };
 		1DC4DCE92E4CE3ABD538092F /* walk_07.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = walk_07.png; sourceTree = "<group>"; };
 		1E7519D50E4A72A544572AEB /* walk_04@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "walk_04@2x.png"; sourceTree = "<group>"; };
@@ -162,6 +164,7 @@
 		B44ED9D8188BE36D61149000 /* Managers */ = {
 			isa = PBXGroup;
 			children = (
+				F0E1D2C3B4A596879A8B7C6D /* AccessibilityManager.swift */,
 				A5139977034C5F403CD6A6AF /* AudioCaptureManager.swift */,
 				71181F360C1CE136EB924B2D /* HotkeyManager.swift */,
 				B1C270C1CBDF022951B2BDB0 /* OverlayWindowController.swift */,
@@ -302,6 +305,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1A2B3C4D5E6F7A8B9C0D1E2F /* AccessibilityManager.swift in Sources */,
 				FB0CA46C50CDA611989E2BEC /* AppState.swift in Sources */,
 				EBEBB909E9616D3AA8C4F5A9 /* AudioCaptureManager.swift in Sources */,
 				1F6699CAB20FDF32FA070DFC /* Constants.swift in Sources */,

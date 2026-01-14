@@ -2,6 +2,14 @@ import Foundation
 import Speech
 import NaturalLanguage
 
+/// Model loading state for UI indicator
+enum SpeechModelState: String {
+    case notLoaded = "Not Ready"
+    case loading = "Loading..."
+    case ready = "Ready"
+    case error = "Error"
+}
+
 /// Manages speech-to-text transcription
 /// Currently uses Apple Speech framework, with MLX Whisper integration planned
 @MainActor
@@ -10,6 +18,8 @@ final class WhisperManager: ObservableObject {
 
     @Published var isTranscribing: Bool = false
     @Published var lastTranscription: String = ""
+    @Published var modelState: SpeechModelState = .notLoaded
+    @Published var isProcessing: Bool = false
 
     // Speech recognition (Apple's built-in)
     private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
@@ -26,19 +36,24 @@ final class WhisperManager: ObservableObject {
     // MARK: - Authorization
 
     private func requestSpeechAuthorization() {
+        modelState = .loading
         SFSpeechRecognizer.requestAuthorization { status in
             Task { @MainActor in
                 switch status {
                 case .authorized:
                     NSLog("[Shepherd Whisper] Speech recognition authorized")
+                    self.modelState = .ready
                 case .denied:
                     NSLog("[Shepherd Whisper] Speech recognition denied")
+                    self.modelState = .error
                 case .restricted:
                     NSLog("[Shepherd Whisper] Speech recognition restricted")
+                    self.modelState = .error
                 case .notDetermined:
                     NSLog("[Shepherd Whisper] Speech recognition not determined")
+                    self.modelState = .notLoaded
                 @unknown default:
-                    break
+                    self.modelState = .error
                 }
             }
         }
@@ -50,6 +65,9 @@ final class WhisperManager: ObservableObject {
     func transcribeAndCheckKeywords(_ audioSamples: [Float], keywords: [String]) async -> (text: String, matchedKeyword: String?) {
         NSLog("[Shepherd Whisper] Transcribing \(audioSamples.count) samples...")
 
+        isProcessing = true
+        defer { isProcessing = false }
+
         // Convert Float array to audio buffer
         let text = await transcribeAudioSamples(audioSamples)
 
@@ -57,6 +75,7 @@ final class WhisperManager: ObservableObject {
             return ("", nil)
         }
 
+        lastTranscription = text
         NSLog("[Shepherd Whisper] Transcription: '\(text)'")
 
         // Check for keywords (case-insensitive)

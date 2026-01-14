@@ -21,6 +21,13 @@ final class WatcherManager: ObservableObject {
     // Audio monitoring (v3.0)
     private var isAudioMonitoringActive: Bool = false
 
+    // Dynamic frame rate - reduce CPU when screen is static
+    private var currentCaptureInterval: TimeInterval = 1.0
+    private var consecutiveUnchangedFrames: Int = 0
+    private let minCaptureInterval: TimeInterval = 0.5  // Fastest rate when changes detected
+    private let maxCaptureInterval: TimeInterval = 5.0  // Slowest rate when static (1 FPS -> ~0.2 FPS)
+    private let unchangedFramesBeforeSlowdown: Int = 3  // Start slowing after 3 unchanged frames
+
     private init() {
         setupNotifications()
         observeAppState()
@@ -91,20 +98,20 @@ final class WatcherManager: ObservableObject {
         let hasVisualWatchers = watchers.contains { $0.isActive && $0.watchMode == .visual }
         let hasAudioWatchers = watchers.contains { $0.isActive && $0.watchMode == .audio }
 
-        // Handle visual monitoring
+        // Handle visual monitoring with dynamic frame rate
         if hasVisualWatchers && captureTimer == nil {
-            NSLog("[Shepherd] Starting visual monitoring")
+            NSLog("[Shepherd] Starting visual monitoring with dynamic frame rate")
+            currentCaptureInterval = minCaptureInterval
+            consecutiveUnchangedFrames = 0
             Task { await captureAndAnalyze() }
-            captureTimer = Timer.scheduledTimer(withTimeInterval: AppState.shared.captureInterval, repeats: true) { [weak self] _ in
-                Task { @MainActor in await self?.captureAndAnalyze() }
-            }
-            RunLoop.main.add(captureTimer!, forMode: .common)
+            scheduleNextCapture()
         } else if !hasVisualWatchers && captureTimer != nil {
             NSLog("[Shepherd] Stopping visual monitoring (no visual watchers)")
             captureTimer?.invalidate()
             captureTimer = nil
             previousFrames.removeAll()
             unchangedDurations.removeAll()
+            consecutiveUnchangedFrames = 0
         }
 
         // Handle audio monitoring - START only if audio watchers exist, STOP when none exist
@@ -128,6 +135,42 @@ final class WatcherManager: ObservableObject {
         }
     }
 
+    // MARK: - Dynamic Frame Rate
+
+    /// Schedule the next capture with dynamic interval
+    private func scheduleNextCapture() {
+        captureTimer?.invalidate()
+        captureTimer = Timer.scheduledTimer(withTimeInterval: currentCaptureInterval, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                await self?.captureAndAnalyze()
+                self?.scheduleNextCapture()
+            }
+        }
+        RunLoop.main.add(captureTimer!, forMode: .common)
+    }
+
+    /// Adjust capture interval based on frame changes
+    private func adjustCaptureInterval(frameChanged: Bool) {
+        if frameChanged {
+            // Content changed - reset to fast capture rate
+            consecutiveUnchangedFrames = 0
+            currentCaptureInterval = minCaptureInterval
+            NSLog("[Shepherd] Frame changed - capture interval reset to \(currentCaptureInterval)s")
+        } else {
+            // No change - gradually slow down
+            consecutiveUnchangedFrames += 1
+
+            if consecutiveUnchangedFrames > unchangedFramesBeforeSlowdown {
+                // Exponential backoff: double the interval each time, up to max
+                let newInterval = min(currentCaptureInterval * 1.5, maxCaptureInterval)
+                if newInterval != currentCaptureInterval {
+                    currentCaptureInterval = newInterval
+                    NSLog("[Shepherd] Static content - capture interval increased to \(String(format: "%.1f", currentCaptureInterval))s")
+                }
+            }
+        }
+    }
+
     // MARK: - Monitoring Loop
     func startMonitoring() {
         let watchers = AppState.shared.watchers
@@ -143,6 +186,7 @@ final class WatcherManager: ObservableObject {
         captureTimer = nil
         previousFrames.removeAll()
         unchangedDurations.removeAll()
+        consecutiveUnchangedFrames = 0
 
         // Stop audio monitoring
         if isAudioMonitoringActive {
@@ -158,6 +202,8 @@ final class WatcherManager: ObservableObject {
         let visualWatchers = AppState.shared.watchers.filter { $0.isActive && $0.watchMode == .visual }
         shepherdLog("captureAndAnalyze called, visual watchers: \(visualWatchers.count)")
 
+        var anyFrameChanged = false
+
         for watcher in visualWatchers {
             do {
                 let regionToCapture = watcher.currentRegion
@@ -171,30 +217,38 @@ final class WatcherManager: ObservableObject {
                     if text.localizedCaseInsensitiveContains(keyword) {
                         shepherdLog("KEYWORD FOUND: '\(keyword)' in OCR text!")
                         triggerAlert(for: watcher, reason: "Keyword '\(keyword)' detected")
+                        anyFrameChanged = true  // Important event - keep fast rate
                         continue
                     }
                 }
 
-                // Deadman Switch (pixel change detection)
-                if AppState.shared.enableDeadmanSwitch {
-                    if let previousFrame = previousFrames[watcher.id] {
-                        let similarity = compareImages(image, previousFrame)
-                        if similarity > 0.99 {
-                            unchangedDurations[watcher.id, default: 0] += AppState.shared.captureInterval
+                // Check for frame changes (for dynamic frame rate and deadman switch)
+                if let previousFrame = previousFrames[watcher.id] {
+                    let similarity = compareImages(image, previousFrame)
+                    let frameChanged = similarity <= 0.99
+
+                    if frameChanged {
+                        anyFrameChanged = true
+                        unchangedDurations[watcher.id] = 0
+                    } else {
+                        // Deadman Switch (pixel change detection)
+                        if AppState.shared.enableDeadmanSwitch {
+                            unchangedDurations[watcher.id, default: 0] += currentCaptureInterval
                             if unchangedDurations[watcher.id]! >= ShepherdTiming.deadmanSwitchTimeout {
                                 triggerAlert(for: watcher, reason: "No change detected for 5 minutes")
                                 unchangedDurations[watcher.id] = 0
                             }
-                        } else {
-                            unchangedDurations[watcher.id] = 0
                         }
                     }
-                    previousFrames[watcher.id] = image
                 }
+                previousFrames[watcher.id] = image
             } catch {
                 NSLog("[Shepherd] ERROR: Capture failed for \(watcher.name): \(error)")
             }
         }
+
+        // Adjust frame rate based on content changes
+        adjustCaptureInterval(frameChanged: anyFrameChanged)
     }
 
     // MARK: - Screen Capture

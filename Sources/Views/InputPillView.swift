@@ -10,7 +10,26 @@ struct InputPillView: View {
     @State private var keyword: String = ""
     @State private var watchMode: WatchMode = .visual
     @State private var isVisible: Bool = false
+    @State private var showRecommendation: Bool = false
     @FocusState private var isNameFocused: Bool
+
+    /// Apps that typically benefit from audio monitoring
+    private static let audioRecommendedApps = [
+        "zoom.us", "Zoom", "zoom",
+        "Microsoft Teams", "Teams",
+        "Google Meet", "Meet", "Chrome",  // Chrome for Google Meet
+        "Slack",
+        "Discord",
+        "Webex", "Cisco Webex Meetings",
+        "Skype",
+        "FaceTime"
+    ]
+
+    private var recommendedMode: WatchMode {
+        guard let windowName = windowName else { return .visual }
+        let isAudioApp = Self.audioRecommendedApps.contains { windowName.localizedCaseInsensitiveContains($0) }
+        return isAudioApp ? .audio : .visual
+    }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -33,6 +52,7 @@ struct InputPillView: View {
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             watchMode = mode
+                            showRecommendation = false
                         }
                     } label: {
                         HStack(spacing: 4) {
@@ -40,6 +60,16 @@ struct InputPillView: View {
                                 .font(.caption)
                             Text(mode.displayName)
                                 .font(.caption)
+                            // Show recommendation badge
+                            if showRecommendation && mode == recommendedMode {
+                                Text("Rec")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 2)
+                                    .background(Color.green)
+                                    .cornerRadius(4)
+                            }
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
@@ -51,6 +81,19 @@ struct InputPillView: View {
                 }
             }
             .padding(.bottom, 4)
+
+            // Smart recommendation hint
+            if showRecommendation && watchMode == .audio {
+                HStack(spacing: 4) {
+                    Image(systemName: "sparkles")
+                        .font(.caption2)
+                        .foregroundColor(.green)
+                    Text("Audio mode recommended for \(windowName ?? "this app")")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.bottom, 4)
+            }
 
             // Name input
             HStack {
@@ -70,23 +113,28 @@ struct InputPillView: View {
 
             // Keyword input (optional)
             HStack {
-                Image(systemName: "magnifyingglass")
+                Image(systemName: watchMode == .audio ? "waveform" : "magnifyingglass")
                     .foregroundColor(.secondary)
                     .font(.caption)
 
-                TextField(watchMode == .audio ? "Keyword to listen for..." : "Keyword to watch (optional)", text: $keyword)
+                TextField(watchMode == .audio ? "Speech keyword to detect..." : "Keyword to watch (optional)", text: $keyword)
                     .textFieldStyle(.plain)
                     .onSubmit {
                         submitIfValid()
                     }
             }
 
-            // Audio mode hint
+            // Mode-specific hints
             if watchMode == .audio {
-                Text("Listens to system audio for spoken keywords")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Uses on-device Whisper model to detect spoken words")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Text("Audio is captured from system output, not microphone")
+                        .font(.caption2)
+                        .foregroundColor(.secondary.opacity(0.7))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             // Action buttons
@@ -127,6 +175,13 @@ struct InputPillView: View {
             withAnimation(ShepherdAnimation.springBounce) {
                 isVisible = true
             }
+
+            // Smart default: set recommended mode based on app
+            if recommendedMode == .audio {
+                watchMode = .audio
+                showRecommendation = true
+            }
+
             // Auto-focus with slight delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 isNameFocused = true
