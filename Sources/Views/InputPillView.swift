@@ -111,18 +111,24 @@ struct InputPillView: View {
 
             Divider()
 
-            // Keyword input (optional)
+            // Keyword input (optional, supports comma-separated)
             HStack {
                 Image(systemName: watchMode == .audio ? "waveform" : "magnifyingglass")
                     .foregroundColor(.secondary)
                     .font(.caption)
 
-                TextField(watchMode == .audio ? "Speech keyword to detect..." : "Keyword to watch (optional)", text: $keyword)
+                TextField(watchMode == .audio ? "Keywords (e.g. 问题, 如何, ?)" : "Keywords (e.g. error, failed, ?)", text: $keyword)
                     .textFieldStyle(.plain)
                     .onSubmit {
                         submitIfValid()
                     }
             }
+
+            // Keyword format hint
+            Text("Separate multiple keywords with commas")
+                .font(.caption2)
+                .foregroundColor(.secondary.opacity(0.7))
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             // Mode-specific hints
             if watchMode == .audio {

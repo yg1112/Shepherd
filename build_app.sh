@@ -135,19 +135,41 @@ echo -e "${GREEN}App installed${NC}"
 
 # Step 5: Code signing (for signed and release builds)
 if [[ "${BUILD_MODE}" == "signed" || "${BUILD_MODE}" == "release" ]]; then
-    echo -e "\n${YELLOW}[5/6] Verifying code signature...${NC}"
+    echo -e "\n${YELLOW}[5/6] Code signing with Hardened Runtime...${NC}"
+
+    # Create a release entitlements file (without get-task-allow)
+    RELEASE_ENTITLEMENTS="/tmp/${APP_NAME}-release.entitlements"
+    cat > "${RELEASE_ENTITLEMENTS}" << 'ENTITLEMENTS_EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+</dict>
+</plist>
+ENTITLEMENTS_EOF
+
+    # Re-sign with hardened runtime, timestamp, and proper entitlements
+    codesign --force --deep --timestamp --options runtime \
+        --entitlements "${RELEASE_ENTITLEMENTS}" \
+        --sign "${DEVELOPER_ID}" \
+        "${APP_PATH}"
 
     # Verify signature
     codesign --verify --verbose "${APP_PATH}"
 
     if [ $? -eq 0 ]; then
-        echo -e "${GREEN}Code signature verified${NC}"
+        echo -e "${GREEN}Code signing successful${NC}"
     else
         echo -e "${RED}Code signature verification failed${NC}"
         exit 1
     fi
+
+    # Clean up
+    rm -f "${RELEASE_ENTITLEMENTS}"
 else
-    echo -e "\n${YELLOW}[5/6] Skipping code signing verification (dev build)...${NC}"
+    echo -e "\n${YELLOW}[5/6] Skipping code signing (dev build)...${NC}"
 fi
 
 # Step 6: Notarization (for release builds only)
@@ -161,11 +183,14 @@ if [[ "${BUILD_MODE}" == "release" ]]; then
 
     # Submit for notarization using keychain profile
     echo "Submitting to Apple for notarization (using keychain profile: ${NOTARY_PROFILE})..."
-    xcrun notarytool submit "${NOTARIZE_ZIP}" \
+    NOTARIZE_OUTPUT=$(xcrun notarytool submit "${NOTARIZE_ZIP}" \
         --keychain-profile "${NOTARY_PROFILE}" \
-        --wait
+        --wait 2>&1)
 
-    if [ $? -eq 0 ]; then
+    echo "${NOTARIZE_OUTPUT}"
+
+    # Check if notarization was accepted (look for "status: Accepted")
+    if echo "${NOTARIZE_OUTPUT}" | grep -q "status: Accepted"; then
         echo -e "${GREEN}Notarization successful${NC}"
 
         # Staple the notarization ticket to the app
@@ -179,6 +204,13 @@ if [[ "${BUILD_MODE}" == "release" ]]; then
         fi
     else
         echo -e "${RED}Notarization failed${NC}"
+        # Extract submission ID and show log
+        SUBMISSION_ID=$(echo "${NOTARIZE_OUTPUT}" | grep "id:" | head -1 | awk '{print $2}')
+        if [ -n "${SUBMISSION_ID}" ]; then
+            echo "Fetching notarization log..."
+            xcrun notarytool log "${SUBMISSION_ID}" --keychain-profile "${NOTARY_PROFILE}"
+        fi
+        echo ""
         echo "If the keychain profile doesn't exist, create it with:"
         echo "  xcrun notarytool store-credentials \"${NOTARY_PROFILE}\" --apple-id \"your@email.com\" --team-id \"${TEAM_ID}\""
         exit 1

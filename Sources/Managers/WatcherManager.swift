@@ -50,17 +50,29 @@ final class WatcherManager: ObservableObject {
         let audioWatchers = AppState.shared.watchers.filter { $0.isActive && $0.watchMode == .audio }
         guard !audioWatchers.isEmpty else { return }
 
-        let keywords = audioWatchers.compactMap { $0.keyword }
-        guard !keywords.isEmpty else { return }
+        // Build flat list of all keywords (supporting comma-separated)
+        var allKeywords: [String] = []
+        var keywordToWatcher: [String: Watcher] = [:]
 
-        NSLog("[Shepherd] Processing audio chunk for keywords: \(keywords)")
+        for watcher in audioWatchers {
+            guard let keywordString = watcher.keyword else { continue }
+            let keywords = keywordString.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+            for keyword in keywords where !keyword.isEmpty {
+                allKeywords.append(keyword)
+                keywordToWatcher[keyword.lowercased()] = watcher
+            }
+        }
+
+        guard !allKeywords.isEmpty else { return }
+
+        NSLog("[Shepherd] Processing audio chunk for keywords: \(allKeywords)")
 
         // Transcribe and check for keywords
-        let result = await WhisperManager.shared.transcribeAndCheckKeywords(samples, keywords: keywords)
+        let result = await WhisperManager.shared.transcribeAndCheckKeywords(samples, keywords: allKeywords)
 
         if let matchedKeyword = result.matchedKeyword {
             // Find the watcher that matches this keyword
-            if let watcher = audioWatchers.first(where: { $0.keyword?.localizedCaseInsensitiveCompare(matchedKeyword) == .orderedSame }) {
+            if let watcher = keywordToWatcher[matchedKeyword.lowercased()] {
                 NSLog("[Shepherd] AUDIO KEYWORD DETECTED: '\(matchedKeyword)' for watcher '\(watcher.name)'")
                 triggerAlert(for: watcher, reason: "Heard keyword '\(matchedKeyword)' in audio")
             }
@@ -209,17 +221,24 @@ final class WatcherManager: ObservableObject {
                 let regionToCapture = watcher.currentRegion
                 let image = try await captureRegion(regionToCapture)
 
-                // OCR Analysis
-                if AppState.shared.enableOCR, let keyword = watcher.keyword, !keyword.isEmpty {
+                // OCR Analysis - supports multiple comma-separated keywords
+                if AppState.shared.enableOCR, let keywordString = watcher.keyword, !keywordString.isEmpty {
                     let text = await performOCR(on: image)
-                    shepherdLog("OCR for '\(watcher.name)': keyword='\(keyword)', found='\(text.prefix(100))'")
 
-                    if text.localizedCaseInsensitiveContains(keyword) {
-                        shepherdLog("KEYWORD FOUND: '\(keyword)' in OCR text!")
-                        triggerAlert(for: watcher, reason: "Keyword '\(keyword)' detected")
-                        anyFrameChanged = true  // Important event - keep fast rate
-                        continue
+                    // Split by comma and check each keyword
+                    let keywords = keywordString.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+                    shepherdLog("OCR for '\(watcher.name)': keywords=\(keywords), found='\(text.prefix(100))'")
+
+                    for keyword in keywords where !keyword.isEmpty {
+                        if text.localizedCaseInsensitiveContains(keyword) {
+                            shepherdLog("KEYWORD FOUND: '\(keyword)' in OCR text!")
+                            triggerAlert(for: watcher, reason: "Keyword '\(keyword)' detected")
+                            anyFrameChanged = true  // Important event - keep fast rate
+                            break  // Stop checking after first match
+                        }
                     }
+
+                    if anyFrameChanged { continue }  // Skip frame comparison if keyword found
                 }
 
                 // Check for frame changes (for dynamic frame rate and deadman switch)
