@@ -189,7 +189,8 @@ final class OverlayWindowController: ObservableObject {
         window.isOpaque = false
         window.backgroundColor = .clear
         window.ignoresMouseEvents = true
-        window.collectionBehavior = [.canJoinAllSpaces, .stationary]
+        // Don't join all spaces - mark stays on the desktop where watched window is
+        window.collectionBehavior = [.stationary]
         window.hasShadow = false
 
         let markView = WatcherMarkView(watcherId: watcher.id)

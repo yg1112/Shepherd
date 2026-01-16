@@ -8,6 +8,9 @@ extension Color {
     /// Alert Orange - Triggered state
     static let alertOrange = Color(hex: "#FF5722")
 
+    /// Pearl White - Mark background for better visibility
+    static let pearlWhite = Color(hex: "#F5F5F5")
+
     /// Overlay background
     static let overlayBackground = Color.black.opacity(0.3)
 }

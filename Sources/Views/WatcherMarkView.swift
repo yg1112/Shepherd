@@ -27,13 +27,13 @@ struct WatcherMarkView: View {
     }
 
     var body: some View {
-        // Custom logo with frosted glass circle background
+        // Custom logo with pearl white circle background
         ZStack {
-            // Frosted glass circle background
+            // Pearl white circle background for better visibility
             Circle()
-                .fill(.ultraThinMaterial)
+                .fill(Color.pearlWhite)
                 .frame(width: 44, height: 44)
-                .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+                .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
 
             // Icon based on watch mode
             if isAudioMode {
@@ -85,7 +85,7 @@ struct WatcherMarkView: View {
         // Normal state
         ZStack {
             Circle()
-                .fill(.ultraThinMaterial)
+                .fill(Color.pearlWhite)
                 .frame(width: 44, height: 44)
             Image("MenuBarIcon")
                 .renderingMode(.template)
@@ -99,7 +99,7 @@ struct WatcherMarkView: View {
         // Triggered state
         ZStack {
             Circle()
-                .fill(.ultraThinMaterial)
+                .fill(Color.pearlWhite)
                 .frame(width: 44, height: 44)
             Image("MenuBarIcon")
                 .renderingMode(.template)
@@ -111,5 +111,5 @@ struct WatcherMarkView: View {
         .shadow(color: Color.alertOrange.opacity(0.4), radius: 6)
     }
     .padding(40)
-    .background(Color.gray.opacity(0.3))
+    .background(Color.black)  // Dark background to test visibility
 }
