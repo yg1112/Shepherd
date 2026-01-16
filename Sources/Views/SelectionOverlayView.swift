@@ -22,8 +22,12 @@ struct SelectionOverlayView: View {
                     .opacity(isVisible ? 1 : 0)
 
                 // Window highlight (Klein Blue border around detected window)
-                if let windowInfo = detectedWindowInfo, !showInputPill {
-                    WindowHighlightView(frame: windowInfo.frame)
+                if let windowInfo = detectedWindowInfo, !showInputPill, dragStart == nil {
+                    WindowHighlightView(
+                        frame: windowInfo.frame,
+                        windowName: windowInfo.ownerName ?? "Window",
+                        hasSnapElement: snappedElementFrame != nil
+                    )
                 }
 
                 // Smart Snap highlight (magnetic element detection)
@@ -179,10 +183,22 @@ struct SelectionOverlayView: View {
         }
     }
 
-    /// Handle single click to snap select
+    /// Handle single click to snap select or select entire window
     private func handleSnapClick() {
+        // Priority 1: Select snapped UI element
         if let snapFrame = snappedElementFrame {
+            shepherdLog("Selected snapped element: \(snapFrame)")
             appState.completeSelection(region: snapFrame, windowInfo: detectedWindowInfo)
+            withAnimation(ShepherdAnimation.springBounce) {
+                showInputPill = true
+            }
+            return
+        }
+
+        // Priority 2: Select entire detected window
+        if let windowInfo = detectedWindowInfo {
+            shepherdLog("Selected entire window: '\(windowInfo.ownerName ?? "Unknown")' frame: \(windowInfo.frame)")
+            appState.completeSelection(region: windowInfo.frame, windowInfo: windowInfo)
             withAnimation(ShepherdAnimation.springBounce) {
                 showInputPill = true
             }
@@ -193,14 +209,55 @@ struct SelectionOverlayView: View {
 // MARK: - Window Highlight View (Klein Blue border around detected window)
 struct WindowHighlightView: View {
     let frame: CGRect
+    let windowName: String
+    let hasSnapElement: Bool
 
     var body: some View {
-        Rectangle()
-            .stroke(Color.kleinBlue, lineWidth: 3)
-            .shadow(color: .kleinBlue, radius: 8)
-            .shadow(color: .kleinBlue.opacity(0.5), radius: 16)
+        ZStack {
+            // Window border
+            Rectangle()
+                .stroke(Color.kleinBlue, lineWidth: 3)
+                .shadow(color: .kleinBlue, radius: 8)
+                .shadow(color: .kleinBlue.opacity(0.5), radius: 16)
+                .frame(width: frame.width, height: frame.height)
+                .position(x: frame.midX, y: frame.midY)
+
+            // Action hint at bottom of window
+            VStack {
+                Spacer()
+
+                HStack(spacing: 16) {
+                    // Click to monitor hint
+                    HStack(spacing: 6) {
+                        Image(systemName: "cursorarrow.click.2")
+                            .font(.system(size: 12, weight: .medium))
+                        Text("Click to monitor \(windowName)")
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.kleinBlue.opacity(0.9))
+                    .cornerRadius(8)
+
+                    // Drag for custom region hint
+                    HStack(spacing: 6) {
+                        Image(systemName: "rectangle.dashed")
+                            .font(.system(size: 12, weight: .medium))
+                        Text("Drag for custom region")
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundColor(.white.opacity(0.8))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.black.opacity(0.5))
+                    .cornerRadius(8)
+                }
+                .padding(.bottom, 20)
+            }
             .frame(width: frame.width, height: frame.height)
             .position(x: frame.midX, y: frame.midY)
+        }
     }
 }
 
