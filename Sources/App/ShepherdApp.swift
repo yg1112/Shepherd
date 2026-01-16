@@ -86,7 +86,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 }
 
-// MARK: - Menu Bar Icon (Static)
+// MARK: - Menu Bar Icon (Always White for visibility)
 struct MenuBarIcon: View {
     let state: ShepherdState
 
@@ -94,51 +94,25 @@ struct MenuBarIcon: View {
     @State private var flashTimer: Timer?
 
     var body: some View {
-        Group {
-            if isMonitoring || isSelecting {
-                // 监控中/选择中：黑色狗
-                Image("MenuBarIconActive")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 22, height: 22)
-            } else if isTriggered {
-                // 触发状态：黑色狗闪烁
-                Image("MenuBarIconActive")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 22, height: 22)
-                    .opacity(isFlashing ? 0.3 : 1.0)
-            } else {
-                // 空闲状态：白色狗
-                Image("MenuBarIconIdle")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 22, height: 22)
+        // Always use white icon for best visibility on any wallpaper
+        Image("MenuBarIconIdle")
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 22, height: 22)
+            .opacity(isTriggered ? (isFlashing ? 0.3 : 1.0) : 1.0)
+            .onAppear {
+                updateFlashState()
             }
-        }
-        .onAppear {
-            updateFlashState()
-        }
-        .onChange(of: state) { _ in
-            updateFlashState()
-        }
-        .onDisappear {
-            stopFlashing()
-        }
+            .onChange(of: state) { _ in
+                updateFlashState()
+            }
+            .onDisappear {
+                stopFlashing()
+            }
     }
 
     private var isTriggered: Bool {
         if case .triggered = state { return true }
-        return false
-    }
-
-    private var isMonitoring: Bool {
-        if case .monitoring = state { return true }
-        return false
-    }
-
-    private var isSelecting: Bool {
-        if case .selecting = state { return true }
         return false
     }
 

@@ -46,13 +46,10 @@ struct SelectionOverlayView: View {
                         .position(mousePosition)
                 }
 
-                // Input pill after selection
+                // Input pill after selection (smart positioning)
                 if showInputPill, let rect = selectionRect {
                     InputPillView(
-                        position: CGPoint(
-                            x: rect.midX,
-                            y: rect.maxY + 60
-                        ),
+                        position: calculatePillPosition(for: rect, in: geometry.size),
                         windowName: detectedWindowInfo?.ownerName,
                         onSubmit: { name, keyword, watchMode in
                             appState.addWatcher(name: name, keyword: keyword, watchMode: watchMode)
@@ -203,6 +200,41 @@ struct SelectionOverlayView: View {
                 showInputPill = true
             }
         }
+    }
+
+    // MARK: - Smart Pill Positioning
+
+    /// Calculate optimal position for InputPill to stay within screen bounds
+    private func calculatePillPosition(for rect: CGRect, in screenSize: CGSize) -> CGPoint {
+        let pillWidth: CGFloat = 280  // InputPillView width
+        let pillHeight: CGFloat = 250 // Approximate height with all options
+        let margin: CGFloat = 20
+        let spacing: CGFloat = 60
+
+        var x = rect.midX
+        var y = rect.maxY + spacing
+
+        // Check if pill would go below screen bottom
+        if y + pillHeight / 2 > screenSize.height - margin {
+            // Show above selection instead
+            y = rect.minY - spacing
+            // If still too high, center on selection
+            if y - pillHeight / 2 < margin {
+                y = rect.midY
+            }
+        }
+
+        // Clamp X to keep pill within screen bounds
+        let minX = pillWidth / 2 + margin
+        let maxX = screenSize.width - pillWidth / 2 - margin
+        x = max(minX, min(maxX, x))
+
+        // Clamp Y as well
+        let minY = pillHeight / 2 + margin
+        let maxY = screenSize.height - pillHeight / 2 - margin
+        y = max(minY, min(maxY, y))
+
+        return CGPoint(x: x, y: y)
     }
 }
 
